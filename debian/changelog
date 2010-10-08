@@ -1,3 +1,9 @@
+play-1.1rc1-20-g2b079e4 (play-1.1rc1-20-g2b079e4-1) maverick; urgency=low
+
+  * Moved to upstream git
+
+ -- Stephane Epardaud <stephane@epardaud.fr>  Fri, 08 Oct 2010 12:01:34 +0200
+
 play-1.1-unstable-r1003 (1.1-unstable-r1003-1ubuntu4) maverick; urgency=low
 
   * Moved PDF out
