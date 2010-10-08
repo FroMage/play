@@ -1,0 +1,19 @@
+--- framework/pym/play/application.py	2010-05-21 09:32:01 +0000
++++ framework/pym/play/application.py	2010-07-15 14:52:10 +0000
+@@ -250,13 +250,13 @@
+     def getAllKeys(self, query):
+         result = []
+         for (key, value) in self.entries.items():
+-            if key.startswith(query) or key.startswith('%' + self.id + '.' + key):
++            if key.startswith(query) or key.startswith('%' + self.id + '.' + query):
+                 result.append(key)
+         return result
+ 
+     def getAll(self, query):
+         result = []
+         for (key, value) in self.entries.items():
+-            if key.startswith(query) or key.startswith('%' + self.id + '.' + key):
++            if key.startswith(query) or key.startswith('%' + self.id + '.' + query):
+                 result.append(value)
+         return result
+

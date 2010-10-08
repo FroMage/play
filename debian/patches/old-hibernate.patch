@@ -1,0 +1,82 @@
+--- framework/src/play/db/jpa/JPAPlugin.java	2010-08-10 18:08:19 +0000
++++ framework/src/play/db/jpa/JPAPlugin.java	2010-08-11 08:11:41 +0000
+@@ -128,42 +128,42 @@
+                 }
+ 
+                 @Override
+-                public boolean onCollectionUpdate(Object collection, Serializable key) throws CallbackException {
+-                    if (collection instanceof PersistentCollection) {
+-                        Object o = ((PersistentCollection) collection).getOwner();
+-                        if (o instanceof JPABase) {
+-                            return ((JPABase) o).willBeSaved;
+-                        }
+-                    } else {
+-                        System.out.println("HOO: Case not handled !!!");
+-                    }
+-                    return super.onCollectionUpdate(collection, key);
+-                }
+-
+-                @Override
+-                public boolean onCollectionRecreate(Object collection, Serializable key) throws CallbackException {
+-                    if (collection instanceof PersistentCollection) {
+-                        Object o = ((PersistentCollection) collection).getOwner();
+-                        if (o instanceof JPABase) {
+-                            return ((JPABase) o).willBeSaved;
+-                        }
+-                    } else {
+-                        System.out.println("HOO: Case not handled !!!");
+-                    }
+-                    return super.onCollectionRecreate(collection, key);
+-                }
+-
+-                @Override
+-                public boolean onCollectionRemove(Object collection, Serializable key) throws CallbackException {
+-                    if (collection instanceof PersistentCollection) {
+-                        Object o = ((PersistentCollection) collection).getOwner();
+-                        if (o instanceof JPABase) {
+-                            return ((JPABase) o).willBeSaved;
+-                        }
+-                    } else {
+-                        System.out.println("HOO: Case not handled !!!");
+-                    }
+-                    return super.onCollectionRemove(collection, key);
++                public void onCollectionUpdate(Object collection, Serializable key) throws CallbackException {
++                    if (collection instanceof PersistentCollection) {
++                        Object o = ((PersistentCollection) collection).getOwner();
++                        if (o instanceof JPABase) {
++                            return;
++                        }
++                    } else {
++                        System.out.println("HOO: Case not handled !!!");
++                    }
++                    super.onCollectionUpdate(collection, key);
++                }
++
++                @Override
++                public void onCollectionRecreate(Object collection, Serializable key) throws CallbackException {
++                    if (collection instanceof PersistentCollection) {
++                        Object o = ((PersistentCollection) collection).getOwner();
++                        if (o instanceof JPABase) {
++                            return;
++                        }
++                    } else {
++                        System.out.println("HOO: Case not handled !!!");
++                    }
++                    super.onCollectionRecreate(collection, key);
++                }
++
++                @Override
++                public void onCollectionRemove(Object collection, Serializable key) throws CallbackException {
++                    if (collection instanceof PersistentCollection) {
++                        Object o = ((PersistentCollection) collection).getOwner();
++                        if (o instanceof JPABase) {
++                            return;
++                        }
++                    } else {
++                        System.out.println("HOO: Case not handled !!!");
++                    }
++                    super.onCollectionRemove(collection, key);
+                 }
+             });
+             if (Play.configuration.getProperty("jpa.debugSQL", "false").equals("true")) {
+

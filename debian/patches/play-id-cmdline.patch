@@ -1,0 +1,16 @@
+--- play        2010-08-10 18:08:19 +0000
++++ play        2010-08-13 14:35:22 +0000
+@@ -71,9 +71,10 @@
+         play_command = 'none'
+ 
+     # ~~~~~~~~~~~~~~~~~ Override id
+-    for a in remaining_args:
++    for a in remaining_args[:]:
+         if a.find('--%') == 0:
+             play_env["id"] = a[3:]
++            remaining_args.remove(a)
+ 
+     if play_command == 'test' or play_command == 'auto-test':
+         play_env["id"] = 'test'
+
+
