@@ -1,6 +1,7 @@
 play-1.1rc1-20-g2b079e4 (play-1.1rc1-20-g2b079e4-1) maverick; urgency=low
 
   * Moved to upstream git
+  * Start off with a prod id
 
  -- Stephane Epardaud <stephane@epardaud.fr>  Fri, 08 Oct 2010 12:01:34 +0200
 
