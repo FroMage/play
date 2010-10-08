@@ -1,6 +1,6 @@
 #!/bin/sh
 
-VERSION=1.1rc1-20-g2b079e4
+VERSION=1.1rc1-20-g2b079e4-hh
 
 set -e
 
