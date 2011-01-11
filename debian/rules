@@ -7,7 +7,7 @@
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
 
-VERSION=$(shell git describe --tags refs/heads/master | tr '[A-Z]' '[a-z]')
+VERSION=1.1
 
 DEB_PATH=debian/play-$(VERSION)
 DEB_PATH_HH=debian/play-$(VERSION)-hh
