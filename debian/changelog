@@ -1,3 +1,9 @@
+play-1.2.2 (1.2.2-2) natty; urgency=low
+
+  * Updated version number to make latest Ubuntu happy
+
+ -- Stephane Epardaud <stephane@eden>  Mon, 22 Aug 2011 11:50:17 +0200
+
 play-1.2.2 (play-1.2.2-1ubuntu1) maverick; urgency=low
 
   * Rebased on 1.2.2
