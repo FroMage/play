@@ -13,6 +13,7 @@ License:	ASL
 URL:		http://www.playframework.org
 Source0:	play-1.2.4-1.2.4.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+BuildArch:	noarch
 
 BuildRequires:	ant, java-1.6.0, python >= 2.5
 Requires:	java-1.6.0, python >= 2.5
