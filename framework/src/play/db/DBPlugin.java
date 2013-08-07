@@ -11,6 +11,7 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -338,6 +339,12 @@ public class DBPlugin extends PlayPlugin {
         public boolean jdbcCompliant() {
             return this.driver.jdbcCompliant();
         }
+
+		@Override
+		public java.util.logging.Logger getParentLogger()
+				throws SQLFeatureNotSupportedException {
+			return this.driver.getParentLogger();
+		}
     }
 
     public static class PlayConnectionCustomizer implements ConnectionCustomizer {
