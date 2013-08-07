@@ -7,6 +7,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import javax.sql.DataSource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,9 +28,15 @@ import play.mvc.Http.Response;
 import play.mvc.results.Redirect;
 import play.vfs.VirtualFile;
 
+/**
+ * Handles migration of data.
+ *
+ * Does only support the default DBConfig
+ */
 public class Evolutions extends PlayPlugin {
+	
 
-    public static void main(String[] args) {
+  	public static void main(String[] args) throws SQLException {
 
         /** Check that evolutions are enabled **/
         if (!evolutionsDirectory.exists()) {
@@ -51,7 +58,7 @@ public class Evolutions extends PlayPlugin {
         new DBPlugin().onApplicationStart();
 
         /** Connected **/
-        System.out.println("~ Connected to " + ((ComboPooledDataSource) DB.datasource).getJdbcUrl());
+        System.out.println("~ Connected to " + DB.datasource.getConnection().getMetaData().getURL());
 
         /** Sumary **/
         Evolution database = listDatabaseEvolutions().peek();
@@ -125,6 +132,7 @@ public class Evolutions extends PlayPlugin {
                     System.out.println("~");
                     System.out.println("~ Can't apply evolutions...");
                     System.out.println("~");
+                    System.exit(-1);
                 }
 
 
@@ -136,6 +144,7 @@ public class Evolutions extends PlayPlugin {
                 } else {
                     System.out.println("~ Can't apply evolutions...");
                     System.out.println("~");
+                    System.exit(-1);
                 }
 
             } else {
@@ -250,11 +259,12 @@ public class Evolutions extends PlayPlugin {
                     }
                     // Execute script
                     if (runScript) {
-                        for (String sql : (evolution.applyUp ? evolution.sql_up : evolution.sql_down).split(";")) {
-                            if (StringUtils.isEmpty(sql.trim())) {
+                       for (CharSequence sql : new SQLSplitter((evolution.applyUp ? evolution.sql_up : evolution.sql_down))) {
+                            final String s = sql.toString().trim();
+                            if (StringUtils.isEmpty(s)) {
                                 continue;
                             }
-                            execute(sql);
+                            connection.createStatement().execute(s);
                         }
                     }
                     // Insert into logs
@@ -409,15 +419,44 @@ public class Evolutions extends PlayPlugin {
         Connection connection = null;
         try {
             connection = getNewConnection();
-            ResultSet rs = connection.getMetaData().getTables(null, null, "play_evolutions", null);
-            if (rs.next()) {
+            String tableName = "play_evolutions";
+            boolean tableExists = true;
+            ResultSet rs = connection.getMetaData().getTables(null, null, tableName, null);
+
+            if (!rs.next()) {
+                // Table in lowercase does not exist
+                // oracle gives table names in upper case
+                tableName = tableName.toUpperCase();
+                Logger.trace("Checking " + tableName);
+                rs.close();
+                rs = connection.getMetaData().getTables(null, null, tableName, null);
+                // Does it exist?
+                if (!rs.next() ) {
+                    // did not find it in uppercase either
+                    tableExists = false;
+                }
+            }
+
+            // Do we have a
+            if (tableExists) {
                 ResultSet databaseEvolutions = connection.createStatement().executeQuery("select id, hash, apply_script, revert_script from play_evolutions");
                 while (databaseEvolutions.next()) {
                     Evolution evolution = new Evolution(databaseEvolutions.getInt(1), databaseEvolutions.getString(3), databaseEvolutions.getString(4), false);
                     evolutions.add(evolution);
                 }
             } else {
-                execute("create table play_evolutions (id int not null primary key, hash varchar(255) not null, applied_at timestamp not null, apply_script text, revert_script text, state varchar(255), last_problem text)");
+                // If you are having problems with the default datatype text (clob for Oracle), you can
+                // specify your own datatype using the 'evolution.PLAY_EVOLUTIONS.textType'-property
+                String textDataType = Play.configuration.getProperty("evolution.PLAY_EVOLUTIONS.textType");
+                if (textDataType == null) {
+                    if (isOracleDialectInUse()) {
+                        textDataType = "clob";
+                    } else {
+                        textDataType = "text";
+                    }
+                }
+
+                execute("create table play_evolutions (id int not null primary key, hash varchar(255) not null, applied_at timestamp not null, apply_script " + textDataType + ", revert_script " + textDataType + ", state varchar(255), last_problem " + textDataType + ")");
             }
         } catch (SQLException e) {
             Logger.error(e, "SQL error while checking play evolutions");
@@ -426,6 +465,24 @@ public class Evolutions extends PlayPlugin {
         }
         Collections.sort(evolutions);
         return evolutions;
+    }
+
+    private synchronized static boolean isOracleDialectInUse() {
+        boolean isOracle = false;
+
+        String jpaDialect = Play.configuration.getProperty("jpa.dialect");
+        if (jpaDialect != null) {
+            try {
+                Class<?> dialectClass = Play.classloader.loadClass(jpaDialect);
+			
+                // Oracle 8i dialect is the base class for oracle dialects (at least for now)
+                isOracle = org.hibernate.dialect.Oracle8iDialect.class.isAssignableFrom(dialectClass);
+            } catch (ClassNotFoundException e) {
+                // swallow
+                Logger.warn("jpa.dialect class %s not found", jpaDialect);
+            }
+        }
+        return isOracle;
     }
 
     public static class Evolution implements Comparable<Evolution> {

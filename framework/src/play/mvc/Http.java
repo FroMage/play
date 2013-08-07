@@ -150,7 +150,7 @@ public class Http {
          */
         public String value;
         /**
-         * Cookie max-age
+         * Cookie max-age in second
          */
         public Integer maxAge;
         /**
@@ -373,9 +373,8 @@ public class Http {
         }
 
         protected void parseXForwarded() {
-
             if (Play.configuration.containsKey("XForwardedSupport") && headers.get("x-forwarded-for") != null) {
-                if (!("all".equals(Play.configuration.getProperty("XForwardedSupport", "127.0.0.1"))) && !Arrays.asList(Play.configuration.getProperty("XForwardedSupport", "127.0.0.1").split(",")).contains(remoteAddress)) {
+            	if (!"ALL".equalsIgnoreCase(Play.configuration.getProperty("XForwardedSupport")) && !Arrays.asList(Play.configuration.getProperty("XForwardedSupport", "127.0.0.1").split("[\\s,]+")).contains(remoteAddress)) {
                     throw new RuntimeException("This proxy request is not authorized: " + remoteAddress);
                 } else {
                     secure = isRequestSecure();
@@ -392,21 +391,16 @@ public class Http {
         }
         
         private boolean isRequestSecure() {
-            if ("https".equals(Play.configuration.get("XForwardedProto"))) {
-                return true;
-            }
-        	
             Header xForwardedProtoHeader = headers.get("x-forwarded-proto");
-            if (xForwardedProtoHeader != null && "https".equals(xForwardedProtoHeader.value())) {
-                return true;
-            }
-
             Header xForwardedSslHeader = headers.get("x-forwarded-ssl");
-            if (xForwardedSslHeader != null && "on".equals(xForwardedSslHeader.value())) {
-                return true;
-            }
-        	
-            return false;
+            // Check the less common "front-end-https" header,
+            // used apparently only by "Microsoft Internet Security and Acceleration Server"
+            // and Squid when using Squid as a SSL frontend.
+            Header frontEndHttpsHeader = headers.get("front-end-https");
+            return ("https".equals(Play.configuration.get("XForwardedProto")) ||
+                    (xForwardedProtoHeader != null && "https".equals(xForwardedProtoHeader.value())) ||
+                    (xForwardedSslHeader != null && "on".equals(xForwardedSslHeader.value())) ||
+                    (frontEndHttpsHeader != null && "on".equals(frontEndHttpsHeader.value().toLowerCase())));
         }
 
         /**
@@ -544,7 +538,7 @@ public class Http {
             });
             List<String> result = new ArrayList<String>(10);
             for (String lang : languages) {
-                result.add(lang.split(";")[0]);
+                result.add(lang.trim().split(";")[0]);
             }
             return result;
         }

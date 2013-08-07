@@ -94,16 +94,17 @@ public class Java {
      * @return The method or null
      */
     public static Method findActionMethod(String name, Class clazz) {
-        while (!clazz.getName().equals("java.lang.Object")) {
-            for (Method m : clazz.getDeclaredMethods()) {
-                if (m.getName().equalsIgnoreCase(name) && Modifier.isPublic(m.getModifiers())) {
+	    // We don't want to check the views
+	  	while (!clazz.getName().equals("java.lang.Object")) {
+		    for (Method m : clazz.getDeclaredMethods()) {
+			    if (m.getName().equalsIgnoreCase(name) && Modifier.isPublic(m.getModifiers())) {
                     // Check that it is not an intercepter
                     if (!m.isAnnotationPresent(Before.class) && !m.isAnnotationPresent(After.class) && !m.isAnnotationPresent(Finally.class)) {
                         return m;
                     }
                 }
             }
-            clazz = clazz.getSuperclass();
+		    clazz = clazz.getSuperclass();
         }
         return null;
     }

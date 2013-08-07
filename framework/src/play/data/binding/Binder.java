@@ -25,6 +25,7 @@ import java.util.*;
  */
 public abstract class Binder {
     public final static Object MISSING = new Object();
+    private final static Object DIRECTBINDING_NO_RESULT = new Object();
     public final static Object NO_BINDING = new Object();
 
     static final Map<Class<?>, TypeBinder<?>> supportedTypes = new HashMap<Class<?>, TypeBinder<?>>();
@@ -187,16 +188,23 @@ public abstract class Binder {
                 return bindCollection(clazz, type, paramNode, bindingAnnotations);
             }
 
+            Object directBindResult = internalDirectBind(paramNode.getOriginalKey(), bindingAnnotations.annotations, paramNode.getFirstValue(clazz), clazz, type);
+            
+            if (directBindResult != DIRECTBINDING_NO_RESULT) {
+                // we found a value/result when direct binding
+                return directBindResult;
+            }
+
+            // Must do the default array-check after direct binding, since some custom-binders checks for specific arrays
             if (clazz.isArray()) {
                 return bindArray(clazz, paramNode, bindingAnnotations);
             }
+			
+			if (!paramNode.getAllChildren().isEmpty()) {
+	        	return internalBindBean(clazz, paramNode, bindingAnnotations);
+	        }
 
-            if (!paramNode.getAllChildren().isEmpty()) {
-                return internalBindBean(clazz, paramNode, bindingAnnotations);
-            }
-
-            return directBind(paramNode.getOriginalKey(), bindingAnnotations.annotations, paramNode.getFirstValue(clazz), clazz, type);
-
+            return null; // give up
         } catch (Exception e) {
             Validation.addError(paramNode.getOriginalKey(), "validation.invalid");
         }
@@ -282,7 +290,7 @@ public abstract class Binder {
             return;
         }
 
-        ParamNode paramNode = rootParamNode.getChild(name);
+        ParamNode paramNode = StringUtils.isEmpty(name) ? rootParamNode : rootParamNode.getChild(name);
 
         try {
             internalBindBean(paramNode, bean, new BindingAnnotations());
@@ -399,7 +407,9 @@ public abstract class Binder {
                     if (annotation.annotationType().equals(As.class)) {
                         As as = ((As) annotation);
                         final String separator = as.value()[0];
-                        values = values[0].split(separator);
+						if (separator != null && StringUtils.isNotEmpty(separator)){
+                        	values = values[0].split(separator);
+						}
                     }
                 }
             }
@@ -423,7 +433,16 @@ public abstract class Binder {
             List l = (List) r;
 
             // must get all indexes and sort them so we add items in correct order.
-            Set<String> indexes = new TreeSet<String>(paramNode.getAllChildrenKeys());
+            Set<String> indexes = new TreeSet<String>(new Comparator<String>() {
+                public int compare(String arg0, String arg1) {
+                    try {
+                        return Integer.parseInt(arg0) - Integer.parseInt(arg1);
+                    } catch (NumberFormatException e) {
+                        return arg0.compareTo(arg1);
+                    }
+                }
+            });
+            indexes.addAll(paramNode.getAllChildrenKeys());
 
             // get each value in correct order with index
 
@@ -506,6 +525,18 @@ public abstract class Binder {
      * @throws Exception
      */
     public static Object directBind(String name, Annotation[] annotations, String value, Class<?> clazz, Type type) throws Exception {
+        // calls the direct binding and returns null if no value could be resolved..
+        Object r = internalDirectBind(name, annotations, value, clazz, type);
+        if ( r == DIRECTBINDING_NO_RESULT) {
+            return null;
+        } else {
+            return r;
+        }
+    }
+
+    // If internalDirectBind was not able to bind it, it returns a special variable instance: DIRECTBIND_MISSING
+    // Needs this because sometimes we need to know if no value was returned..
+    private static Object internalDirectBind(String name, Annotation[] annotations, String value, Class<?> clazz, Type type) throws Exception {
         boolean nullOrEmpty = value == null || value.trim().length() == 0;
 
         if (annotations != null) {
@@ -552,12 +583,12 @@ public abstract class Binder {
         if (clazz.equals(String.class)) {
             return value;
         }
-        
+
         // Handles the case where the model property is a sole character
         if (clazz.equals(Character.class)) {
             return value.charAt(0);
         }
-        
+
         // Enums
         if (Enum.class.isAssignableFrom(clazz)) {
             return nullOrEmpty ? null : Enum.valueOf((Class<Enum>) clazz, value);
@@ -635,7 +666,7 @@ public abstract class Binder {
             return Boolean.parseBoolean(value);
         }
 
-        return null;
+        return DIRECTBINDING_NO_RESULT;
     }
 
 

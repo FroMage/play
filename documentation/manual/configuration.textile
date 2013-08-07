@@ -17,7 +17,7 @@ bc. application.baseUrl=http://localhost:9000/
 
 For @prod@ mode:
 
-bc. %production%.application.baseUrl=http://www.yourdomain.com/
+bc. %production.application.baseUrl=http://www.yourdomain.com/
 
 
 h3(#application.defaultCookieDomain). application.defaultCookieDomain
@@ -214,7 +214,7 @@ Default: @secret@
 
 h2(#cron). Scheduled jobs
 
-You can configure cron expressions for scheduled jobs as configuration keys that start with @cron.@ and use the key as the value of a <code>@play.jobs.On</code> or <code>@Every</code> annotation. For example, <code>@On(cron.noon)</code> refers to:
+You can configure cron expressions for scheduled jobs as configuration keys that start with @cron.@ and use the key as the value of a <code>@play.jobs.On</code> or <code>@Every</code> annotation. For example, <code>@On("cron.noon")</code> refers to:
 
 bc. cron.noon=0 0 12 * * ?
 
@@ -468,6 +468,18 @@ h3(#http.proxyUser). http.proxyUser
 Proxy user for web services requests.
 
 Default: @http.proxyUser@ system property.
+
+
+h3(#http.nonProxyHosts). http.nonProxyHosts
+
+Indicates the hosts which should be connected to directly and not through the proxy server.
+The value can be a list of hosts, each seperated by a @|@, and in addition a wildcard character @*@ can be used for matching.
+
+For example:
+
+bc. http.nonProxyHosts=localhost|*.example.com
+
+Default: @http.nonProxyHosts@ system property.
 
 
 
@@ -899,6 +911,6 @@ bc. XForwardedProto=https
 
 h3(#XForwardedSupport). XForwardedSupport
 
-A comma-separated list of IP addresses that are allowed @X-Forwarded-For@ HTTP request header values, used to restrict local addresses when an @X-Forwarded-For@ request header is set by a proxy server.
+A comma-separated list of IP addresses that are allowed @X-Forwarded-For@ HTTP request header values, used to restrict local addresses when an @X-Forwarded-For@ request header is set by a proxy server. Alternatively you can use 'ALL' if you do not want to restrict local addresses. **Note**: only use 'ALL' if you are very sure that if it safe to do so (e.g. you have a proper firewall in place that blocks public requests). A valid use-case would be when using Play! behind a Amazon ELB loadbalancer, which internal IP's tend to change over time.      
 
 Default: @127.0.0.1@

@@ -231,13 +231,21 @@ public class JavaExtensions {
         return format(new Date(timestamp), pattern, lang, timezone);
     }
 
-    public static RawData nl2br(Object data) {
+    public static RawData nl2br(RawData data) {
         return new RawData(data.toString().replace("\n", "<br/>"));
+    }
+
+    public static RawData nl2br(Object data) {
+        return new RawData(HTML.htmlEscape(data.toString()).replace("\n", "<br/>"));
     }
 
     public static String urlEncode(String entity) {
         try {
-            return URLEncoder.encode(entity, Http.Response.current().encoding);
+            String encoding = play.Play.defaultWebEncoding;
+            if (Http.Response.current() != null) {
+                encoding = Http.Response.current().encoding;
+            }
+            return URLEncoder.encode(entity, encoding);
         } catch (UnsupportedEncodingException e) {
             Logger.error(e, entity);
         }
@@ -263,7 +271,7 @@ public class JavaExtensions {
         numberFormat.setCurrency(currency);
         numberFormat.setMaximumFractionDigits(currency.getDefaultFractionDigits());
         String s = numberFormat.format(number);
-        s = s.replace(currencyCode, I18N.getCurrencySymbol(currencyCode));
+        s = s.replace(currencyCode + " ", I18N.getCurrencySymbol(currencyCode));
         return s;
     }
 
@@ -273,7 +281,7 @@ public class JavaExtensions {
         numberFormat.setCurrency(currency);
         numberFormat.setMaximumFractionDigits(currency.getDefaultFractionDigits());
         String s = numberFormat.format(number);
-        s = s.replace(currency.getCurrencyCode(), currency.getSymbol(locale));
+        s = s.replace(currency.getCurrencyCode() + " ", currency.getSymbol(locale));
         return s;
     }
 
@@ -359,7 +367,7 @@ public class JavaExtensions {
         string = string.replaceAll("([a-z])'s([^a-z])", "$1s$2");
         string = string.replaceAll("[^\\w]", "-").replaceAll("-{2,}", "-");
         // Get rid of any - at the start and end.
-        string.replaceAll("-+$", "").replaceAll("^-+", "");
+        string = string.replaceAll("-+$", "").replaceAll("^-+", "");
 
         return (lowercase ? string.toLowerCase() : string);
     }

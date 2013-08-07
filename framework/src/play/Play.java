@@ -118,9 +118,9 @@ public class Play {
      */
     public static Map<String, VirtualFile> modulesRoutes;
     /**
-     * The main application.conf
+     * The loaded configuration files
      */
-    public static VirtualFile conf;
+    public static Set<VirtualFile> confs = new HashSet<VirtualFile>(1);
     /**
      * The app configuration (already resolved from the framework id)
      */
@@ -241,8 +241,13 @@ public class Play {
         }
 
         // Mode
-        mode = Mode.valueOf(configuration.getProperty("application.mode", "DEV").toUpperCase());
-        if (usePrecompiled || forceProd) {
+		try {
+        	mode = Mode.valueOf(configuration.getProperty("application.mode", "DEV").toUpperCase());
+		} catch (IllegalArgumentException e) {
+			Logger.error("Illegal mode '%s', use either prod or dev", configuration.getProperty("application.mode"));
+			fatalServerErrorOccurred();
+		}
+		if (usePrecompiled || forceProd) {
             mode = Mode.PROD;
         }
 
@@ -339,23 +344,32 @@ public class Play {
      * Read application.conf and resolve overriden key using the play id mechanism.
      */
     public static void readConfiguration() {
-        configuration = readOneConfigurationFile("application.conf", new HashSet<String>());
+        confs = new HashSet<VirtualFile>();
+        configuration = readOneConfigurationFile("application.conf");
+        extractHttpPort();
         // Plugins
         pluginCollection.onConfigurationRead();
+     }
+
+    private static void extractHttpPort() {
+        final String javaCommand = System.getProperty("sun.java.command", "");
+        jregex.Matcher m = new jregex.Pattern(".* --http.port=({port}\\d+)").matcher(javaCommand);
+        if (m.matches()) {
+            configuration.setProperty("http.port", m.group("port"));
+        }
     }
 
 
-    private static Properties readOneConfigurationFile(String filename, Set<String> seenFileNames) {
-
-        if (seenFileNames.contains(filename)) {
-            throw new RuntimeException("Detected recursive @include usage. Have seen the file " + filename + " before");
-        }
-        seenFileNames.add(filename);
-
+    private static Properties readOneConfigurationFile(String filename) {
         Properties propsFromFile=null;
 
         VirtualFile appRoot = VirtualFile.open(applicationPath);
-        conf = appRoot.child("conf/" + filename);
+        
+        VirtualFile conf = appRoot.child("conf/" + filename);
+        if (confs.contains(conf)) {
+            throw new RuntimeException("Detected recursive @include usage. Have seen the file " + filename + " before");
+        }
+        
         try {
             propsFromFile = IO.readUtf8Properties(conf.inputstream());
         } catch (RuntimeException e) {
@@ -364,6 +378,8 @@ public class Play {
                 fatalServerErrorOccurred();
             }
         }
+        confs.add(conf);
+        
         // OK, check for instance specifics configuration
         Properties newConfiguration = new OrderSafeProperties();
         Pattern pattern = Pattern.compile("^%([a-zA-Z0-9_\\-]+)\\.(.*)$");
@@ -417,7 +433,7 @@ public class Play {
             if (key.toString().startsWith("@include.")) {
                 try {
                     String filenameToInclude = propsFromFile.getProperty(key.toString());
-                    toInclude.putAll( readOneConfigurationFile(filenameToInclude, seenFileNames) );
+                    toInclude.putAll( readOneConfigurationFile(filenameToInclude) );
                 } catch (Exception ex) {
                     Logger.warn("Missing include: %s", key);
                 }
@@ -456,6 +472,8 @@ public class Play {
             if (mode == Mode.DEV) {
                 // Need a new classloader
                 classloader = new ApplicationClassloader();
+                // Put it in the current context for any code that relies on having it there
+                Thread.currentThread().setContextClassLoader(classloader);
                 // Reload plugins
                 pluginCollection.reloadApplicationPlugins();
 
@@ -614,9 +632,11 @@ public class Play {
                 classloader.detectChanges();
             }
             Router.detectChanges(ctxPath);
-            if (conf.lastModified() > startedAt) {
-                start();
-                return;
+            for(VirtualFile conf : confs) {
+                if (conf.lastModified() > startedAt) {
+                    start();
+                    return;
+                }
             }
             pluginCollection.detectChange();
             if (!Play.started) {
@@ -709,6 +729,10 @@ public class Play {
         if (localModules.exists() && localModules.isDirectory()) {
             for (File module : localModules.listFiles()) {
                 String moduleName = module.getName();
+		if (moduleName.startsWith(".")) {
+			Logger.info("Module %s is ignored, name starts with a dot", moduleName);
+			continue;
+		}
                 if (moduleName.contains("-")) {
                     moduleName = moduleName.substring(0, moduleName.indexOf("-"));
                 }

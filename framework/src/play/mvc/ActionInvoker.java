@@ -159,6 +159,12 @@ public class ActionInvoker {
                     ControllerInstrumentation.initActionCall();
                     try {
                         inferResult(invokeControllerMethod(actionMethod));
+                    } catch(Result result) {
+                        actionResult = result;
+                        // Cache it if needed
+                        if (cacheKey != null) {
+                            play.cache.Cache.set(cacheKey, actionResult, actionMethod.getAnnotation(CacheFor.class).value());
+                        }
                     } catch (InvocationTargetException ex) {
                         // It's a Result ? (expected)
                         if (ex.getTargetException() instanceof Result) {
@@ -509,6 +515,9 @@ public class ActionInvoker {
     static final String F = "__future";
     static final String CONTINUATIONS_STORE_LOCAL_VARIABLE_NAMES = "__CONTINUATIONS_STORE_LOCAL_VARIABLE_NAMES";
     static final String CONTINUATIONS_STORE_RENDER_ARGS = "__CONTINUATIONS_STORE_RENDER_ARGS";
+    static final String CONTINUATIONS_STORE_PARAMS = "__CONTINUATIONS_STORE_PARAMS";
+    public static final String CONTINUATIONS_STORE_VALIDATIONS = "__CONTINUATIONS_STORE_VALIDATIONS";
+    static final String CONTINUATIONS_STORE_VALIDATIONPLUGIN_KEYS = "__CONTINUATIONS_STORE_VALIDATIONPLUGIN_KEYS";
 
     static Object invokeWithContinuation(Method method, Object instance, Object[] realArgs) throws Exception {
         // Callback case

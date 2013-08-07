@@ -61,7 +61,6 @@ public class DependenciesManager {
     
     final FileFilter dirsToTrim = new FileFilter() {
     
-        @Override
         public boolean accept(File file) {
             return file.isDirectory() && isDirToTrim(file.getName());
         }
@@ -219,13 +218,27 @@ public class DependenciesManager {
         Boolean trim = System.getProperty("play.trimdeps").equals("true");
         try {
             File from = artifact.getLocalFile();
+
             if (!isPlayModule(artifact)) {
-                File to = new File(application, "lib" + File.separator + from.getName()).getCanonicalFile();
-                new File(application, "lib").mkdir();
-                Files.copy(from, to);
-                System.out.println("~ \tlib/" + to.getName());
-                return to;
+                if ("source".equals(artifact.getArtifact().getType())) {
+                    // A source artifact: leave it in the cache, and write its path in tmp/lib-src/<jar-name>.src
+                    // so that it can be used later by commands generating IDE project fileS.
+                    new File(application, "tmp/lib-src").mkdirs();
+                    IO.writeContent(from.getAbsolutePath(),
+                            new File(application, "tmp/lib-src/" + from.getName().replace("-sources", "") + ".src"));
+                    return null;
+
+                } else {
+                    // A regular library: copy it to the lib/ directory
+                    File to = new File(application, "lib" + File.separator + from.getName()).getCanonicalFile();
+                    new File(application, "lib").mkdir();
+                    Files.copy(from, to);
+                    System.out.println("~ \tlib/" + to.getName());
+                    return to;
+                }
+
             } else {
+                // A module
                 String mName = from.getName();
                 if (mName.endsWith(".jar") || mName.endsWith(".zip")) {
                     mName = mName.substring(0, mName.length() - 4);
@@ -287,6 +300,7 @@ public class DependenciesManager {
         File ivyModule = new File(application, "conf/dependencies.yml");
         if(!ivyModule.exists()) {
             System.out.println("~ !! " + ivyModule.getAbsolutePath() + " does not exist");
+			System.exit(-1);
             return null;
         }
 
@@ -322,7 +336,7 @@ public class DependenciesManager {
         ResolveEngine resolveEngine = ivy.getResolveEngine();
         ResolveOptions resolveOptions = new ResolveOptions();
         resolveOptions.setConfs(new String[]{"default"});
-        resolveOptions.setArtifactFilter(FilterHelper.getArtifactTypeFilter(new String[]{"jar", "bundle"}));
+        resolveOptions.setArtifactFilter(FilterHelper.getArtifactTypeFilter(new String[]{"jar", "bundle", "source"}));
 
         return resolveEngine.resolve(ivyModule.toURI().toURL(), resolveOptions);
     }

@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.sql.Types;
 
 import org.hibernate.HibernateException;
+import org.hibernate.engine.SessionImplementor;
 import org.hibernate.type.StringType;
 import org.hibernate.usertype.UserType;
 
@@ -82,16 +83,25 @@ public class Blob implements BinaryField, UserType {
         return Blob.class;
     }
 
+    private static boolean equal(Object a, Object b) {
+      return a == b || (a != null && a.equals(b));
+    }
+
     public boolean equals(Object o, Object o1) throws HibernateException {
-        return o == null ? false : o.equals(o1);
+        if(o instanceof Blob && o1 instanceof Blob) {
+            return equal(((Blob)o).UUID, ((Blob)o1).UUID) &&
+                    equal(((Blob)o).type, ((Blob)o1).type);
+        }
+        return equal(o, o1);
     }
 
     public int hashCode(Object o) throws HibernateException {
         return o.hashCode();
     }
 
-    public Object nullSafeGet(ResultSet rs, String[] names, Object o) throws HibernateException, SQLException {
-        String val = (String) StringType.INSTANCE.nullSafeGet(rs, names[0]);
+    public Object nullSafeGet(ResultSet resultSet, String[] names, Object o) throws HibernateException, SQLException {
+       	String val = (String) StringType.INSTANCE.get(resultSet, names[0]);
+
         if(val == null || val.length() == 0 || !val.contains("|")) {
             return new Blob();
         }
@@ -99,7 +109,7 @@ public class Blob implements BinaryField, UserType {
     }
 
     public void nullSafeSet(PreparedStatement ps, Object o, int i) throws HibernateException, SQLException {
-        if(o != null) {
+         if(o != null) {
             ps.setString(i, ((Blob)o).UUID + "|" + ((Blob)o).type);
         } else {
             ps.setNull(i, Types.VARCHAR);

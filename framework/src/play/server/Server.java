@@ -71,6 +71,7 @@ public class Server {
         try {
             if (httpPort != -1) {
                 bootstrap.setPipelineFactory(new HttpServerPipelineFactory());
+
                 bootstrap.bind(new InetSocketAddress(address, httpPort));
                 bootstrap.setOption("child.tcpNoDelay", true);
 
@@ -125,7 +126,10 @@ public class Server {
             Logger.error("Could not bind on port " + httpsPort, e);
             Play.fatalServerErrorOccurred();
         }
-
+        if (Play.mode == Mode.DEV) {
+           // print this line to STDOUT - not using logger, so auto test runner will not block if logger is misconfigured (see #1222)     
+           System.out.println("~ Server is up and running");
+	}
     }
 
     private String getOpt(String[] args, String arg, String defaultValue) {

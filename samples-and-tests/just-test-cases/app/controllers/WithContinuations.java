@@ -16,6 +16,8 @@ import models.*;
 import play.jobs.*;
 
 import play.exceptions.*;
+import play.utils.*;
+import play.data.validation.*;
 
 public class WithContinuations extends Controller {
     
@@ -39,7 +41,7 @@ public class WithContinuations extends Controller {
             if(i>0) sb.append(";");
             long s = System.currentTimeMillis();
             await(100);
-            boolean delay = System.currentTimeMillis() - s > 100 && System.currentTimeMillis() - s < 1000;
+            boolean delay = System.currentTimeMillis() - s > 100;
             sb.append(i + ":" + delay);
         }
         renderText(sb);
@@ -62,8 +64,7 @@ public class WithContinuations extends Controller {
             if(i>0) sb.append(";");
             long s = System.currentTimeMillis();
             String r = await(new jobs.DoSomething(100).now());
-            boolean delay = System.currentTimeMillis() - s > 100 && System.currentTimeMillis() - s < 200;
-            sb.append(i + ":" + delay + "[" + r + "]");
+            sb.append(i + ":[" + r + "]");
         }
         renderText(sb);
     }
@@ -97,8 +98,7 @@ public class WithContinuations extends Controller {
             if(i>0) sb.append(";");
             long s = System.currentTimeMillis();
             List<String> r = await(Promise.waitAll(new jobs.DoSomething(100).now(), new jobs.DoSomething(200).now()));
-            boolean delay = System.currentTimeMillis() - s > 200 && System.currentTimeMillis() - s < 400;
-            sb.append(i + ":" + delay + "[" + r + "]");
+            sb.append(i + ":[" + r + "]");
         }
         renderText(sb);
     }
@@ -109,8 +109,7 @@ public class WithContinuations extends Controller {
             if(i>0) sb.append(";");
             long s = System.currentTimeMillis();
             String r = await(Promise.waitAny(new jobs.DoSomething(100).now(), new jobs.DoSomething(200).now()));
-            boolean delay = System.currentTimeMillis() - s > 100 && System.currentTimeMillis() - s < 200;
-            sb.append(i + ":" + delay + "[" + r + "]");
+		    sb.append(i + ":[" + r + "]");
         }
         renderText(sb);
     }
@@ -189,7 +188,7 @@ public class WithContinuations extends Controller {
                 if(i.get() > 5) {
                     renderText(sb);
                 } else {
-                    boolean delay = System.currentTimeMillis() - s.get() > 100 && System.currentTimeMillis() - s.get() < 150;
+                    boolean delay = System.currentTimeMillis() - s.get() > 100;
                     sb.append(i + ":" + delay);
                     s.set(System.currentTimeMillis());
                     await(100, this);
@@ -335,7 +334,6 @@ public class WithContinuations extends Controller {
 
          await("1s", new F.Action0() {
 
-             @Override
              public void invoke() {
                  renderText(renderArgs.get("arg"));
              }
@@ -346,15 +344,14 @@ public class WithContinuations extends Controller {
         renderArgs.put("arg", arg);
 
         Promise<String> promise = new Job() {
-            @Override
-            public String doJobWithResult() throws Exception {
+           
+ 			public String doJobWithResult() throws Exception {
                 return "result";
         }
 
         }.now();
         await(promise, new F.Action<String>() {
 
-            @Override
             public void invoke(String result) {
                 renderText(result + "/" + renderArgs.get("arg"));
             }
@@ -428,6 +425,51 @@ public class WithContinuations extends Controller {
             return "failCount: " + failCount;
         }
     }
+    
+    public static void echoParamsAfterAwait(String a, Integer b) {
+        String beforeString = "before await: " + getEchoString(a,b);
+        await(1);
+        String afterString = "after await: " + getEchoString(a,b);
+        
+        System.out.println("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n" + beforeString + "\n" + afterString);
+        renderText(beforeString + "\n" + afterString);
+    }
+
+    private static String getEchoString(String a, Integer b) {
+        return "a: " + a + " b: " + b + " params[a]: " + Utils.join(params.getAll("a"),",") + " params[b]: " + Utils.join(params.getAll("b"), ",");
+    }
+    
+    
+    private static List<String> getErrorStringList(List<play.data.validation.Error> errorList) {
+        List<String> list = new ArrayList<String>();
+        for ( play.data.validation.Error e : errorList ) {
+            list.add(e.getKey()+"="+e.message());
+        }
+        return list;
+    }
+    
+    public static class SomeBean {
+        @Required
+        public String prop;
+    }
+    
+    public static void validationAndAwait(@Required String a, Integer b) {
+        validation.addError("b", "someError");
+        String beforeErrors = Utils.join(getErrorStringList(validation.errors()), ",");
+        await(1);
+        SomeBean sb = new SomeBean();
+        validation.valid(sb);
+        String afterErrors = Utils.join(getErrorStringList(validation.errors()), ",");
+        renderText("beforeErrors: " + beforeErrors + " afterErrors: " + afterErrors);
+    }
+    
+    public static void paramsLocalVariableTracerAndAwait(int a) {
+        int aa = a;
+        await("1s");
+        render(a,aa);
+        
+    }
+    
     
 }
 

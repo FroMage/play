@@ -35,12 +35,23 @@ def secretKey():
     return ''.join([random.choice('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789') for i in range(64)])
 
 def isParentOf(path1, path2):
-    relpath = os.path.relpath(path1, path2)
-    sep = os.sep
-    if sep == '\\':
-        sep = '\\\\'
-    ptn = '^\.\.(' + sep + '\.\.)*$'
-    return re.match(ptn, relpath) != None
+    try:
+        relpath = os.path.relpath(path1, path2)
+        sep = os.sep
+        if sep == '\\':
+            sep = '\\\\'
+        ptn = '^\.\.(' + sep + '\.\.)*$'
+        return re.match(ptn, relpath) != None
+    except:
+        return False
+
+def isExcluded(path, exclusion_list = None):
+    if exclusion_list is None:
+        return False
+    for exclusion in exclusion_list:
+        if isParentOf(exclusion, path):
+            return True
+    return False
 
 def getWithModules(args, env):
     withModules = []
@@ -88,8 +99,10 @@ def package_as_war(app, env, war_path, war_zip_path, war_exclusion_list = None):
         print "~"
         sys.exit(-1)
 
-    if isParentOf(app.path, war_path):
+    if isParentOf(app.path, war_path) and not isExcluded(war_path, war_exclusion_list):
         print "~ Oops. Please specify a destination directory outside of the application"
+        print "~ or exclude war destination directory using the --exclude option and ':'-separator "
+        print "~ (eg: --exclude .svn:target:logs:tmp)."
         print "~"
         sys.exit(-1)
 

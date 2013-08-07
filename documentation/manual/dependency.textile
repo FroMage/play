@@ -12,9 +12,9 @@ Once you have expressed these dependencies in your application’s @conf/depende
 
 h2. <a name="format">Dependency format</a>
 
-A dependency is described by an organisation a name and a revision number. In the @dependencies.yml@ file you will write it like this:
+A dependency is described by an organisation a name a revision number and optionally a classifier. In the @dependencies.yml@ file you will write it like this:
 
-bc. organisation -> name revision
+bc. organisation -> name revision [classifier]
 
 So, for instance version 1.0 of the "Play PDF module":http://www.playframework.org/modules/pdf is expressed like this:
 
@@ -27,6 +27,11 @@ bc. commons-lang -> commons-lang 2.5
 In this case, you can omit the organisation from the dependency declaration:
 
 bc. commons-lang 2.5
+
+When your dependency has a classifier, you can use this:
+
+bc. net.sf.json-lib -> json-lib 2.4 jdk15
+
 
 h3. Dynamic revisions
 
@@ -176,13 +181,6 @@ bc. play dependencies --forProd
 This removes the @documentation/@, @src/@, @tmp/@, @*sample*/@ and @*test*/@ directories from each module.
 
 
-When you deploy an application in production, you can reduce the size of its modules by removing module source code and documentation. You can do this by adding the @--forProd@ option to the command:
-
-bc. play dependencies --forProd
-
-This removes the @documentation/@, @src/@, @tmp/@, @*sample*/@ and @*test*/@ directories from each module.
-
-
 h2. <a name="conflicts">Conflict resolution</a>
 
 Whenever two components need different revisions of the same dependency, the conflicts manager will choose one. The default is to keep the latest revision and to evict the others. 
@@ -260,7 +258,7 @@ repositories:
     
     - zenexity:
         type:       http
-        artifact:   "http://www.zenexity.com/repo/[module]-[revision].[ext]"
+        artifact:   "http://www.zenexity.com/repo/[module]-[revision].zip"
         contains:
             - com.zenexity -> *
 

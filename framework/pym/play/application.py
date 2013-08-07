@@ -20,11 +20,15 @@ class PlayApplication(object):
 
     def __init__(self, application_path, env, ignoreMissingModules = False):
         self.path = application_path
-        if application_path is not None:
+        # only parse conf it is exists - if it should be there, it will be caught later 
+        # (depends on command)
+        confExists = os.path.exists(os.path.join(self.path, 'conf', 'application.conf')); 
+        if application_path is not None and confExists:
             confFolder = os.path.join(application_path, 'conf/')
             try:
-                self.conf = PlayConfParser(confFolder, env["id"])
-            except:
+                self.conf = PlayConfParser(confFolder, env)
+            except Exception as err:
+                print "~ Failed to parse application configuration", err
                 self.conf = None # No app / Invalid app
         else:
             self.conf = None
@@ -256,6 +260,7 @@ class PlayApplication(object):
             args += ["--https.port=%s" % self.play_env['https.port']]
             
         java_args.append('-Dfile.encoding=utf-8')
+        java_args.append('-XX:CompileCommand=exclude,jregex/Pretokenizer,next')
 
         if self.readConf('application.mode').lower() == 'dev':
             if not self.play_env["disable_check_jpda"]: self.check_jpda()
@@ -269,14 +274,21 @@ class PlayApplication(object):
     # ~~~~~~~~~~~~~~~~~~~~~~ MISC
 
     def toRelative(self, path):
-        return _absoluteToRelative(path, self.path, "").replace("//", "/")
+        return _absoluteToRelative(path, self.path).replace("//", "/")
 
-def _absoluteToRelative(path, reference, dots):
-    if path.find(reference) > -1:
-        ending = path.find(reference) + len(reference)
-        return dots + path[ending:]
-    else:
-        return _absoluteToRelative(path, os.path.dirname(reference), "/.." + dots)
+def _absoluteToRelative(path, start):
+    """Return a relative version of a path"""
+    # Credit - http://pypi.python.org/pypi/BareNecessities/0.2.8
+    if not path:
+        raise ValueError("no path specified")
+    start_list = os.path.abspath(start).split(os.path.sep)
+    path_list = os.path.abspath(path).split(os.path.sep)
+    # Work out how much of the filepath is shared by start and path.
+    i = len(os.path.commonprefix([start_list, path_list]))
+    rel_list = [os.path.pardir] * (len(start_list)-i) + path_list[i:]
+    if not rel_list:
+        return os.path.curdir
+    return os.path.join(*rel_list)
 
 class PlayConfParser:
 
@@ -285,9 +297,11 @@ class PlayConfParser:
         'jpda.port': '8000'
     }
 
-    def __init__(self, confFolder, frameworkId):
-        self.id = frameworkId
+    def __init__(self, confFolder, env):
+        self.id = env["id"]
         self.entries = self.readFile(confFolder, "application.conf")
+        if env.has_key('http.port'):
+            self.entries['http.port'] = env['http.port']
 
     def readFile(self, confFolder, filename):
         f = file(confFolder + filename)
@@ -330,11 +344,14 @@ class PlayConfParser:
         # process all include files
         for includeFile in includeFiles:
             # read include file
-            fromIncludeFile = self.readFile(confFolder, includeFile)
+            try:
+                fromIncludeFile = self.readFile(confFolder, self._expandValue(includeFile))
 
-            # add everything from include file 
-            for (key, value) in fromIncludeFile.items():
-                washedResult[key]=value
+                # add everything from include file 
+                for (key, value) in fromIncludeFile.items():
+                    washedResult[key]=value
+            except Exception as err:
+                print "~ Failed to load included configuration %s: %s" % (includeFile, err)
         
         return washedResult
 
@@ -358,6 +375,16 @@ class PlayConfParser:
             result.append(self.entries.get(key))
         return result
 
+    def _expandValue(self, value):
+        def expandvar(match):
+            key = match.group(1)
+            if key == 'play.id':
+                return self.id
+            else: # unkonwn
+                return '${%s}' % key
+
+        return re.sub('\${([a-z.]+)}', expandvar, value)
+        
 def hasKey(arr, elt):
     try:
         i = arr.index(elt)
