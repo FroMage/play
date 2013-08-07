@@ -3,20 +3,20 @@
 %define play_doc_path		/usr/share/doc/play-%{version}-%{version}
 
 
-Name:		play-1.2.4
-Version:	1.2.4
+Name:		play-1.2.6
+Version:	1.2.6
 Release:	1%{?dist}
 Summary:	Play! Framework
 
 Group:		Development/Languages
 License:	ASL
 URL:		http://www.playframework.org
-Source0:	play-1.2.4-1.2.4.tar.gz
+Source0:	play-1.2.6-1.2.6.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildArch:	noarch
 
-BuildRequires:	ant, java-1.6.0, python >= 2.5
-Requires:	java-1.6.0, python >= 2.5
+BuildRequires:	ant, java-1.7.0, python >= 2.5
+Requires:	java-1.7.0, python >= 2.5
 Provides:	play-1.2
 
 %description
@@ -57,7 +57,7 @@ cd framework; ant clean; cd ..
 %config %{play_etc_path}
 
 %post
-update-alternatives --install /usr/bin/play-1.2 play-1.2 %{play_install_path}/play 1241000001
+update-alternatives --install /usr/bin/play-1.2 play-1.2 %{play_install_path}/play 1261000001
 %preun
 update-alternatives --remove play-1.2 %{play_install_path}/play
 
