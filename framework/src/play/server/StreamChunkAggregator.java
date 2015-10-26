@@ -1,16 +1,25 @@
 package play.server;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.util.List;
+import java.util.UUID;
+
 import org.apache.commons.io.IOUtils;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
-import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.MessageEvent;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMessage;
-import play.Play;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 
-import java.io.*;
-import java.util.List;
-import java.util.UUID;
+import play.Play;
 
 public class StreamChunkAggregator extends SimpleChannelUpstreamHandler {
 
@@ -50,6 +59,11 @@ public class StreamChunkAggregator extends SimpleChannelUpstreamHandler {
                 this.currentMessage = m;
                 this.file = new File(Play.tmpDir, localName);
                 this.out = new FileOutputStream(file, true);
+                String expect = m.getHeader(HttpHeaders.Names.EXPECT);
+                if(expect != null && expect.equals("100-continue")){
+                    DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
+                    ctx.getChannel().write(response);
+                }
             } else {
                 // Not a chunked message - pass through.
                 ctx.sendUpstream(e);
