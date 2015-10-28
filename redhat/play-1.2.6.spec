@@ -15,8 +15,8 @@ Source0:	play-1.2.6-1.2.6.tar.gz
 BuildRoot:	%(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildArch:	noarch
 
-BuildRequires:	ant, java-1.7.0, python >= 2.5
-Requires:	java-1.7.0, python >= 2.5
+BuildRequires:	ant, java-1.7.0-openjdk, python >= 2.5
+Requires:	java-1.7.0-openjdk, python >= 2.5
 Provides:	play-1.2
 
 %description
